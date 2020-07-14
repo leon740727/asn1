@@ -33,7 +33,13 @@ var Value;
     Value.components = components;
     function fromBER(ber) {
         const value = asn1.fromBER(buf2ArrayBuffer(ber)).result;
-        return decode(value);
+        assert.ok(typeof (value.error) === 'string');
+        if (value.error === '') {
+            return types_1.Result.ok(decode(value));
+        }
+        else {
+            return types_1.Result.fail(value.error);
+        }
     }
     Value.fromBER = fromBER;
     function simplify(value) {

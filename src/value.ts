@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as r from 'ramda';
-import { Optional, Json } from 'types';
+import { Optional, Result, Json } from 'types';
 import * as asn1 from 'asn1js';
 
 /**
@@ -13,6 +13,7 @@ import * as asn1 from 'asn1js';
  * * 有些型別的 value 是 []，但 valueDec 或 valueHex 卻有值
  */
 type Asn1Value = {
+    error: string,                          // 空字串('')代表沒有錯誤
     valueBeforeDecode: ArrayBuffer,
     idBlock: {
         tagClass: Universal | Application | Context | Private,
@@ -63,9 +64,14 @@ export namespace Value {
         }
     }
 
-    export function fromBER (ber: Buffer): Value {
+    export function fromBER (ber: Buffer): Result<string, Value> {
         const value: Asn1Value = asn1.fromBER(buf2ArrayBuffer(ber)).result;
-        return decode(value);
+        assert.ok(typeof(value.error) === 'string');
+        if (value.error === '') {
+            return Result.ok(decode(value));
+        } else {
+            return Result.fail(value.error);
+        }
     }
 
     export function simplify (value: Value): Json {
