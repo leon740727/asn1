@@ -20,41 +20,34 @@ function simplify(data) {
 }
 exports.simplify = simplify;
 function compose(schema, value) {
-    if (schema.name === 'any') {
-        return types_1.Result.ok(value);
-    }
-    else if (schema.name === 'list') {
-        return asn1.Value.components(value)
-            .or_fail(`schema error`)
-            .chain(elements => {
-            if (schema.inner.name === 'any') {
-                return types_1.Result.ok(elements);
-            }
-            else {
-                return types_1.Result.all(elements.map(v => compose(schema.inner, v)))
+    return schema
+        .inner.map(inner => {
+        if (Array.isArray(inner)) { // struct
+            return asn1.Value.components(value)
+                .or_fail(`schema error`)
+                .chain(fvalues => {
+                const ps = pairs(inner, fvalues);
+                const fields = ps.map(p => p[0]);
+                const values = ps.map(([fieldSchema, value]) => {
+                    return compose(fieldSchema.schema, value);
+                });
+                return types_1.Result.all(values)
+                    .map(values => {
+                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+                })
                     .if_error(errors => types_1.Optional.cat(errors)[0]);
-            }
-        });
-    }
-    else if (schema.name === 'struct') {
-        return asn1.Value.components(value)
-            .or_fail(`schema error`)
-            .chain(fvalues => {
-            const ps = pairs(schema.fields, fvalues);
-            const fields = ps.map(p => p[0]);
-            const values = ps.map(([fieldSchema, value]) => {
-                return compose(fieldSchema.schema, value);
             });
-            return types_1.Result.all(values)
-                .map(values => {
-                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
-            })
-                .if_error(errors => types_1.Optional.cat(errors)[0]);
-        });
-    }
-    else {
-        const _ = schema;
-    }
+        }
+        else { // list
+            return asn1.Value.components(value)
+                .or_fail(`schema error`)
+                .chain(elements => {
+                return types_1.Result.all(elements.map(v => compose(inner, v)))
+                    .if_error(errors => types_1.Optional.cat(errors)[0]);
+            });
+        }
+    })
+        .or_else(types_1.Result.ok(value));
 }
 exports.compose = compose;
 function pairs(fieldSchemas, values) {

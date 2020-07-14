@@ -10,35 +10,25 @@ import * as asn1 from './value';
  */
 
 /**
- * any: any asn1 value (primitive, list, struct, ...)
- * list: sequenceOf, setOf
+ * inner: constructed value 內部型別的定義
+ * * 對 sequenceOf, setOf 這種 constructed 型別來說，inner 是所有的 sub value 的 schema
+ * * 對 sequence, set 來說，inner 是 StructFieldSchema[]
  */
-export type Schema = AnySchema | ListSchema | StructSchema;
-
-/** any asn1 value (primitive, list, struct) */
-type AnySchema = {
-    name: 'any',
-};
-
-/** sequenceOf, setOf */
-type ListSchema = {
-    name: 'list',
-    inner: Schema,
+export type Schema = {
+    // tagNumber: Optional<number>,            // 沒有 tag-number 代表接受任意型別，就像 * 符號一樣
+    inner: Optional<Schema | StructFieldSchema[]>,
 }
 
 /** 內部型別 */
 type StructFieldSchema = {
     fieldName: string,
     schema: Schema,
+
+    // 透過 implicit / explicit 重新設定 tag number
     tagging: Optional<{
         implicit: boolean,
         tag: number,
     }>,
-}
-
-type StructSchema = {
-    name: 'struct',
-    fields: StructFieldSchema[],
 }
 
 type Data = asn1.Value | Struct | Data[];
@@ -60,37 +50,33 @@ export function simplify (data: Data) {
 }
 
 export function compose (schema: Schema, value: asn1.Value): Result<string, Data> {
-    if (schema.name === 'any') {
-        return Result.ok(value);
-    } else if (schema.name === 'list') {
-        return asn1.Value.components(value)
-        .or_fail(`schema error`)
-        .chain(elements => {
-            if (schema.inner.name === 'any') {
-                return Result.ok<string, Data[]>(elements);
-            } else {
-                return Result.all(elements.map(v => compose(schema.inner, v)))
+    return schema
+    .inner.map(inner => {
+        if (Array.isArray(inner)) {                         // struct
+            return asn1.Value.components(value)
+            .or_fail(`schema error`)
+            .chain(fvalues => {
+                const ps = pairs(inner, fvalues);
+                const fields = ps.map(p => p[0]);
+                const values = ps.map(([fieldSchema, value]) => {
+                    return compose(fieldSchema.schema, value);
+                });
+                return Result.all(values)
+                .map(values => {
+                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+                })
                 .if_error(errors => Optional.cat(errors)[0]);
-            }
-        });
-    } else if (schema.name === 'struct') {
-        return asn1.Value.components(value)
-        .or_fail(`schema error`)
-        .chain(fvalues => {
-            const ps = pairs(schema.fields, fvalues);
-            const fields = ps.map(p => p[0]);
-            const values = ps.map(([fieldSchema, value]) => {
-                return compose(fieldSchema.schema, value);
             });
-            return Result.all(values)
-            .map(values => {
-                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
-            })
-            .if_error(errors => Optional.cat(errors)[0]);
-        });
-    } else {
-        const _: never = schema;
-    }
+        } else {                                            // list
+            return asn1.Value.components(value)
+            .or_fail(`schema error`)
+            .chain(elements => {
+                return Result.all(elements.map(v => compose(inner, v)))
+                .if_error(errors => Optional.cat(errors)[0]) as Result<string, Data>;
+            });
+        }
+    })
+    .or_else(Result.ok(value));
 }
 
 function pairs (fieldSchemas: StructFieldSchema[], values: asn1.Value[]): [StructFieldSchema, asn1.Value][] {

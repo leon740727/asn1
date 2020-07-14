@@ -34,7 +34,7 @@ class AnySchemaBuilder extends SchemaBuilder {
 
     build (): Schema {
         return {
-            name: 'any'
+            inner: Optional.empty(),
         };
     }
 
@@ -53,8 +53,7 @@ class ListSchemaBuilder extends SchemaBuilder {
 
     build (): Schema {
         return {
-            name: 'list',
-            inner: this.innerSchema.build(),
+            inner: Optional.of(this.innerSchema.build()),
         }
     }
 
@@ -79,8 +78,7 @@ class StructSchemaBuilder extends SchemaBuilder {
             tagging: builder.tagging,
         }));
         return {
-            name: 'struct',
-            fields: fields,
+            inner: Optional.of(fields),
         }
     }
 

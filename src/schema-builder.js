@@ -31,7 +31,7 @@ class AnySchemaBuilder extends SchemaBuilder {
     }
     build() {
         return {
-            name: 'any'
+            inner: types_1.Optional.empty(),
         };
     }
     clone() {
@@ -45,8 +45,7 @@ class ListSchemaBuilder extends SchemaBuilder {
     }
     build() {
         return {
-            name: 'list',
-            inner: this.innerSchema.build(),
+            inner: types_1.Optional.of(this.innerSchema.build()),
         };
     }
     clone() {
@@ -66,8 +65,7 @@ class StructSchemaBuilder extends SchemaBuilder {
             tagging: builder.tagging,
         }));
         return {
-            name: 'struct',
-            fields: fields,
+            inner: types_1.Optional.of(fields),
         };
     }
     clone() {
