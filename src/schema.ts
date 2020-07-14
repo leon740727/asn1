@@ -100,7 +100,7 @@ function pairs (fieldSchemas: StructFieldSchema[], values: asn1.Value[]): [Struc
         const [fieldSchema, value] = [fieldSchemas[0], values[0]];
         return fieldSchema.tagging
         .map(tagging => {
-            if (tagging.tag === asn1.Value.tag(value)) {
+            if (tagging.tag === asn1.Value.tagNumber(value)) {
                 // 這個 optional 欄位有值
                 let cur: [StructFieldSchema, asn1.Value];
                 if (tagging.implicit === true) {

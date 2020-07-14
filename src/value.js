@@ -18,10 +18,10 @@ var Value;
         return value['__tag'] !== undefined && value['__ber'] !== undefined && value['__value'] !== undefined;
     }
     Value.isa = isa;
-    function tag(value) {
+    function tagNumber(value) {
         return value.__tag;
     }
-    Value.tag = tag;
+    Value.tagNumber = tagNumber;
     function components(value) {
         if (Array.isArray(value.__value)) {
             return types_1.Optional.of(value.__value);

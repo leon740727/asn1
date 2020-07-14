@@ -42,7 +42,7 @@ type Private = 4;
 type ValueResult = string | number | null | Value[];
 
 export type Value = {
-    __tag: number,
+    __tag: number,                      // 這裡的 __tag 其實是指 tagNumber
     __ber: string,
     __value: ValueResult,
 }
@@ -52,7 +52,7 @@ export namespace Value {
         return value['__tag'] !== undefined && value['__ber'] !== undefined && value['__value'] !== undefined;
     }
 
-    export function tag (value: Value) {
+    export function tagNumber (value: Value) {
         return value.__tag;
     }
 
