@@ -21,13 +21,13 @@ export type Schema = {
 
 /** 內部型別 */
 type StructFieldSchema = {
-    fieldName: string,
+    name: string,
     schema: Schema,
 
     // 透過 implicit / explicit 重新設定 tag number
     tagging: Optional<{
         implicit: boolean,
-        tag: number,
+        tagNumber: number,
     }>,
 }
 
@@ -63,7 +63,7 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
                 });
                 return Result.all(values)
                 .map(values => {
-                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.name, value)));
                 })
                 .if_error(errors => Optional.cat(errors)[0]);
             });
@@ -86,7 +86,7 @@ function pairs (fieldSchemas: StructFieldSchema[], values: asn1.Value[]): [Struc
         const [fieldSchema, value] = [fieldSchemas[0], values[0]];
         return fieldSchema.tagging
         .map(tagging => {
-            if (tagging.tag === asn1.Value.tagNumber(value)) {
+            if (tagging.tagNumber === asn1.Value.tagNumber(value)) {
                 // 這個 optional 欄位有值
                 let cur: [StructFieldSchema, asn1.Value];
                 if (tagging.implicit === true) {

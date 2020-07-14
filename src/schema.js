@@ -33,7 +33,7 @@ function compose(schema, value) {
                 });
                 return types_1.Result.all(values)
                     .map(values => {
-                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.name, value)));
                 })
                     .if_error(errors => types_1.Optional.cat(errors)[0]);
             });
@@ -58,7 +58,7 @@ function pairs(fieldSchemas, values) {
         const [fieldSchema, value] = [fieldSchemas[0], values[0]];
         return fieldSchema.tagging
             .map(tagging => {
-            if (tagging.tag === asn1.Value.tagNumber(value)) {
+            if (tagging.tagNumber === asn1.Value.tagNumber(value)) {
                 // 這個 optional 欄位有值
                 let cur;
                 if (tagging.implicit === true) {

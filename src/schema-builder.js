@@ -8,14 +8,14 @@ class SchemaBuilder {
     constructor(tagging) {
         this.tagging = tagging;
     }
-    implicit(tag) {
+    implicit(tagNumber) {
         const clone = r.clone(this);
-        clone.tagging = types_1.Optional.of({ implicit: true, tag: tag });
+        clone.tagging = types_1.Optional.of({ implicit: true, tagNumber: tagNumber });
         return clone;
     }
-    explicit(tag) {
+    explicit(tagNumber) {
         const clone = r.clone(this);
-        clone.tagging = types_1.Optional.of({ implicit: false, tag: tag });
+        clone.tagging = types_1.Optional.of({ implicit: false, tagNumber: tagNumber });
         return clone;
     }
     build() {
@@ -60,7 +60,7 @@ class StructSchemaBuilder extends SchemaBuilder {
     build() {
         const fields = r.toPairs(this.layout)
             .map(([field, builder]) => ({
-            fieldName: field,
+            name: field,
             schema: builder.build(),
             tagging: builder.tagging,
         }));

@@ -4,17 +4,17 @@ import { Value } from './value';
 import { Schema, compose as _compose, simplify } from './schema';
 
 class SchemaBuilder {
-    constructor (public tagging: Optional<{implicit: boolean, tag: number}>) {}
+    constructor (public tagging: Optional<{implicit: boolean, tagNumber: number}>) {}
 
-    implicit (tag: number) {
+    implicit (tagNumber: number) {
         const clone = r.clone(this);
-        clone.tagging = Optional.of({implicit: true, tag: tag});
+        clone.tagging = Optional.of({implicit: true, tagNumber: tagNumber});
         return clone;
     }
 
-    explicit (tag: number) {
+    explicit (tagNumber: number) {
         const clone = r.clone(this);
-        clone.tagging = Optional.of({implicit: false, tag: tag});
+        clone.tagging = Optional.of({implicit: false, tagNumber: tagNumber});
         return clone;
     }
 
@@ -28,7 +28,7 @@ class SchemaBuilder {
 }
 
 class AnySchemaBuilder extends SchemaBuilder {
-    constructor (tagging: Optional<{implicit: boolean, tag: number}>) {
+    constructor (tagging: Optional<{implicit: boolean, tagNumber: number}>) {
         super(tagging);
     }
 
@@ -45,7 +45,7 @@ class AnySchemaBuilder extends SchemaBuilder {
 
 class ListSchemaBuilder extends SchemaBuilder {
     constructor (
-        tagging: Optional<{implicit: boolean, tag: number}>,
+        tagging: Optional<{implicit: boolean, tagNumber: number}>,
         private innerSchema: SchemaBuilder,
     ) {
         super(tagging);
@@ -64,7 +64,7 @@ class ListSchemaBuilder extends SchemaBuilder {
 
 class StructSchemaBuilder extends SchemaBuilder {
     constructor (
-        tagging: Optional<{implicit: boolean, tag: number}>,
+        tagging: Optional<{implicit: boolean, tagNumber: number}>,
         private layout: {[field: string]: SchemaBuilder},
     ) {
         super(tagging);
@@ -73,7 +73,7 @@ class StructSchemaBuilder extends SchemaBuilder {
     build (): Schema {
         const fields = r.toPairs(this.layout)
         .map(([field, builder]) => ({
-            fieldName: field,
+            name: field,
             schema: builder.build(),
             tagging: builder.tagging,
         }));
