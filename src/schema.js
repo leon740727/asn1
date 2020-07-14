@@ -5,15 +5,6 @@ const assert = require("assert");
 const r = require("ramda");
 const types_1 = require("types");
 const asn1 = require("./value");
-function isStructSchema(schema) {
-    return Array.isArray(schema);
-}
-function isAsn1ValueSchema(schema) {
-    return schema === 'Asn1ValueDef';
-}
-function isListSchema(schema) {
-    return !isStructSchema(schema) && !isAsn1ValueSchema(schema);
-}
 function simplify(data) {
     if (asn1.Value.isa(data)) { // asn1.Value
         return asn1.Value.simplify(data);
@@ -29,42 +20,40 @@ function simplify(data) {
 }
 exports.simplify = simplify;
 function compose(schema, value) {
-    if (isAsn1ValueSchema(schema)) {
+    if (schema.name === 'any') {
         return types_1.Result.ok(value);
     }
-    else if (isStructSchema(schema)) {
-        const structSchema = schema;
-        return asn1.Value.components(value)
-            .or_fail(`schema error`)
-            .chain(fvalues => {
-            const ps = pairs(structSchema, fvalues);
-            const fields = ps.map(p => p[0]);
-            const values = ps.map(([fieldSchema, value]) => {
-                return compose(fieldSchema.type, value);
-            });
-            return types_1.Result.all(values)
-                .map(values => {
-                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.name, value)));
-            })
-                .if_error(errors => types_1.Optional.cat(errors)[0]);
-        });
-    }
-    else if (isListSchema(schema)) {
-        const listSchema = schema;
+    else if (schema.name === 'list') {
         return asn1.Value.components(value)
             .or_fail(`schema error`)
             .chain(elements => {
-            if (isAsn1ValueSchema(listSchema.type)) {
+            if (schema.inner.name === 'any') {
                 return types_1.Result.ok(elements);
             }
             else {
-                return types_1.Result.all(elements.map(v => compose(listSchema.type, v)))
+                return types_1.Result.all(elements.map(v => compose(schema.inner, v)))
                     .if_error(errors => types_1.Optional.cat(errors)[0]);
             }
         });
     }
+    else if (schema.name === 'struct') {
+        return asn1.Value.components(value)
+            .or_fail(`schema error`)
+            .chain(fvalues => {
+            const ps = pairs(schema.fields, fvalues);
+            const fields = ps.map(p => p[0]);
+            const values = ps.map(([fieldSchema, value]) => {
+                return compose(fieldSchema.schema, value);
+            });
+            return types_1.Result.all(values)
+                .map(values => {
+                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+            })
+                .if_error(errors => types_1.Optional.cat(errors)[0]);
+        });
+    }
     else {
-        throw new Error('never be here');
+        const _ = schema;
     }
 }
 exports.compose = compose;

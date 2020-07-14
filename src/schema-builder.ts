@@ -27,17 +27,19 @@ class SchemaBuilder {
     }
 }
 
-class Asn1ValueSchemaBuilder extends SchemaBuilder {
+class AnySchemaBuilder extends SchemaBuilder {
     constructor (tagging: Optional<{implicit: boolean, tag: number}>) {
         super(tagging);
     }
 
     build (): Schema {
-        return 'Asn1ValueDef';
+        return {
+            name: 'any'
+        };
     }
 
     clone () {
-        return new Asn1ValueSchemaBuilder(this.tagging);
+        return new AnySchemaBuilder(this.tagging);
     }
 }
 
@@ -51,7 +53,8 @@ class ListSchemaBuilder extends SchemaBuilder {
 
     build (): Schema {
         return {
-            type: this.innerSchema.build(),
+            name: 'list',
+            inner: this.innerSchema.build(),
         }
     }
 
@@ -69,12 +72,16 @@ class StructSchemaBuilder extends SchemaBuilder {
     }
 
     build (): Schema {
-        return r.toPairs(this.layout)
+        const fields = r.toPairs(this.layout)
         .map(([field, builder]) => ({
-            name: field,
-            type: builder.build(),
+            fieldName: field,
+            schema: builder.build(),
             tagging: builder.tagging,
         }));
+        return {
+            name: 'struct',
+            fields: fields,
+        }
     }
 
     clone () {
@@ -92,7 +99,7 @@ export const schema = {
     },
 
     value: () => {
-        return new Asn1ValueSchemaBuilder(Optional.empty());
+        return new AnySchemaBuilder(Optional.empty());
     }
 }
 

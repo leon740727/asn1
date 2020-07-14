@@ -25,15 +25,17 @@ class SchemaBuilder {
         throw new Error('not implement');
     }
 }
-class Asn1ValueSchemaBuilder extends SchemaBuilder {
+class AnySchemaBuilder extends SchemaBuilder {
     constructor(tagging) {
         super(tagging);
     }
     build() {
-        return 'Asn1ValueDef';
+        return {
+            name: 'any'
+        };
     }
     clone() {
-        return new Asn1ValueSchemaBuilder(this.tagging);
+        return new AnySchemaBuilder(this.tagging);
     }
 }
 class ListSchemaBuilder extends SchemaBuilder {
@@ -43,7 +45,8 @@ class ListSchemaBuilder extends SchemaBuilder {
     }
     build() {
         return {
-            type: this.innerSchema.build(),
+            name: 'list',
+            inner: this.innerSchema.build(),
         };
     }
     clone() {
@@ -56,12 +59,16 @@ class StructSchemaBuilder extends SchemaBuilder {
         this.layout = layout;
     }
     build() {
-        return r.toPairs(this.layout)
+        const fields = r.toPairs(this.layout)
             .map(([field, builder]) => ({
-            name: field,
-            type: builder.build(),
+            fieldName: field,
+            schema: builder.build(),
             tagging: builder.tagging,
         }));
+        return {
+            name: 'struct',
+            fields: fields,
+        };
     }
     clone() {
         return new StructSchemaBuilder(this.tagging, this.layout);
@@ -75,7 +82,7 @@ exports.schema = {
         return new ListSchemaBuilder(types_1.Optional.empty(), innerSchema);
     },
     value: () => {
-        return new Asn1ValueSchemaBuilder(types_1.Optional.empty());
+        return new AnySchemaBuilder(types_1.Optional.empty());
     }
 };
 function compose(schema, value, verbose) {

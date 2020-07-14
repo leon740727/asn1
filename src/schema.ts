@@ -9,41 +9,42 @@ import * as asn1 from './value';
  * Value + Schema => Data
  */
 
-type Asn1ValueSchema = 'Asn1ValueDef';
+/**
+ * any: any asn1 value (primitive, list, struct, ...)
+ * list: sequenceOf, setOf
+ */
+export type Schema = AnySchema | ListSchema | StructSchema;
 
+/** any asn1 value (primitive, list, struct) */
+type AnySchema = {
+    name: 'any',
+};
+
+/** sequenceOf, setOf */
+type ListSchema = {
+    name: 'list',
+    inner: Schema,
+}
+
+/** 內部型別 */
 type StructFieldSchema = {
-    name: string,
-    type: Schema,
+    fieldName: string,
+    schema: Schema,
     tagging: Optional<{
         implicit: boolean,
         tag: number,
     }>,
 }
 
-type StructSchema = StructFieldSchema[];
-
-type ListSchema = {
-    type: Schema,
+type StructSchema = {
+    name: 'struct',
+    fields: StructFieldSchema[],
 }
-
-export type Schema = Asn1ValueSchema | StructSchema | ListSchema;
 
 type Data = asn1.Value | Struct | Data[];
 
 type Struct = {
     [field: string]: Data,
-}
-
-function isStructSchema (schema: Schema) {
-    return Array.isArray(schema);
-}
-
-function isAsn1ValueSchema (schema: Schema) {
-    return schema === 'Asn1ValueDef';
-}
-
-function isListSchema (schema: Schema) {
-    return ! isStructSchema(schema) && ! isAsn1ValueSchema(schema);
 }
 
 export function simplify (data: Data) {
@@ -59,38 +60,36 @@ export function simplify (data: Data) {
 }
 
 export function compose (schema: Schema, value: asn1.Value): Result<string, Data> {
-    if (isAsn1ValueSchema(schema)) {
+    if (schema.name === 'any') {
         return Result.ok(value);
-    } else if (isStructSchema(schema)) {
-        const structSchema = schema as StructSchema;
-        return asn1.Value.components(value)
-        .or_fail(`schema error`)
-        .chain(fvalues => {
-            const ps = pairs(structSchema, fvalues);
-            const fields = ps.map(p => p[0]);
-            const values = ps.map(([fieldSchema, value]) => {
-                return compose(fieldSchema.type, value);
-            });
-            return Result.all(values)
-            .map(values => {
-                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.name, value)));
-            })
-            .if_error(errors => Optional.cat(errors)[0]);
-        });
-    } else if (isListSchema(schema)) {
-        const listSchema = schema as ListSchema;
+    } else if (schema.name === 'list') {
         return asn1.Value.components(value)
         .or_fail(`schema error`)
         .chain(elements => {
-            if (isAsn1ValueSchema(listSchema.type)) {
-                return Result.ok<string, Data[]>(elements)
+            if (schema.inner.name === 'any') {
+                return Result.ok<string, Data[]>(elements);
             } else {
-                return Result.all(elements.map(v => compose(listSchema.type, v)))
+                return Result.all(elements.map(v => compose(schema.inner, v)))
                 .if_error(errors => Optional.cat(errors)[0]);
             }
         });
+    } else if (schema.name === 'struct') {
+        return asn1.Value.components(value)
+        .or_fail(`schema error`)
+        .chain(fvalues => {
+            const ps = pairs(schema.fields, fvalues);
+            const fields = ps.map(p => p[0]);
+            const values = ps.map(([fieldSchema, value]) => {
+                return compose(fieldSchema.schema, value);
+            });
+            return Result.all(values)
+            .map(values => {
+                return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.fieldName, value)));
+            })
+            .if_error(errors => Optional.cat(errors)[0]);
+        });
     } else {
-        throw new Error('never be here');
+        const _: never = schema;
     }
 }
 
