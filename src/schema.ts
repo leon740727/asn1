@@ -11,24 +11,47 @@ import * as asn1 from './value';
 
 /**
  * inner: constructed value 內部型別的定義
- * * 對 sequenceOf, setOf 這種 constructed 型別來說，inner 是所有的 sub value 的 schema
- * * 對 sequence, set 來說，inner 是 StructFieldSchema[]
+ * * 對 list (sequenceOf, setOf) 來說，inner 是所有的 sub value 的 schema
+ * * 對 struct (sequence) 來說，inner 是 StructFieldSchema[]
  */
 export type Schema = {
-    // tagNumber: Optional<number>,            // 沒有 tag-number 代表接受任意型別，就像 * 符號一樣
+    tagNumber: number | '*',                // * is a wildcard
     inner: Optional<Schema | StructFieldSchema[]>,
-}
-
-/** 內部型別 */
-type StructFieldSchema = {
-    name: string,
-    schema: Schema,
 
     // 透過 implicit / explicit 重新設定 tag number
     tagging: Optional<{
         implicit: boolean,
         tagNumber: number,
     }>,
+}
+
+namespace Schema {
+    export function isExplicitTagging (schema: Schema) {
+        return schema.tagging
+        .map(tagging => ! tagging.implicit)
+        .or_else(false);
+    }
+
+    export function finalTagNumber (schema: Schema) {
+        return schema.tagging
+        .map(tagging => tagging.tagNumber as number | '*')
+        .or_else(schema.tagNumber);
+    }
+
+    export function stripTagging (schema: Schema): Schema {
+        return {
+            tagNumber: schema.tagNumber,
+            inner: schema.inner,
+            tagging: Optional.empty(),
+        }
+    }
+}
+
+/** 內部型別 */
+type StructFieldSchema = {
+    name: string,
+    schema: Schema,
+    optional: boolean,
 }
 
 type Data = asn1.Value | Struct | Data[];
@@ -55,17 +78,18 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
         if (Array.isArray(inner)) {                         // struct
             return asn1.Value.components(value)
             .or_fail(`schema error`)
-            .chain(fvalues => {
-                const ps = pairs(inner, fvalues);
-                const fields = ps.map(p => p[0]);
-                const values = ps.map(([fieldSchema, value]) => {
-                    return compose(fieldSchema.schema, value);
+            .chain(values => {
+                const fieldSchemas = inner;
+                return _align(fieldSchemas, values)
+                .chain(pairs => {
+                    const fvs = pairs.map(([fieldSchema, value]) => {
+                        return compose(_schema(fieldSchema), _value(fieldSchema, value))
+                        .map(data => ({[fieldSchema.name]: data}));
+                    });
+                    return Result.all(fvs)
+                    .map(fvs => r.mergeAll(fvs))
+                    .if_error(errors => Optional.cat(errors)[0]);
                 });
-                return Result.all(values)
-                .map(values => {
-                    return r.mergeAll(r.zip(fields, values).map(([field, value]) => r.objOf(field.name, value)));
-                })
-                .if_error(errors => Optional.cat(errors)[0]);
             });
         } else {                                            // list
             return asn1.Value.components(value)
@@ -76,36 +100,87 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
             });
         }
     })
-    .or_else(Result.ok(value));
+    .or_exec(() => {
+        const tag = Schema.finalTagNumber(schema);
+        if (tag === '*' || tag === asn1.Value.tagNumber(value)) {
+            return Result.ok(value);
+        } else {
+            return Result.fail("schema error: tag number doesn't match");
+        }
+    });
+
+    function _align (
+        fieldSchemas: StructFieldSchema[],
+        values: asn1.Value[],
+    ): Result<string, [StructFieldSchema, asn1.Value][]> {
+        return align(
+            fieldSchemas.map(f => ({ tagNumber: Schema.finalTagNumber(f.schema), optional: f.optional, _: f })),
+            values.map(v => ({ tagNumber: asn1.Value.tagNumber(v), _: v })),
+        )
+        .map(pairs => pairs.map(([f, v]) => pair(f._, v._)))
+        .if_error(error => `align schema (${fieldSchemas.map(f => f.name).join(', ')}) error: ${error}`);
+    }
+
+    function _schema (fieldSchema: StructFieldSchema) {
+        if (Schema.isExplicitTagging(fieldSchema.schema)) {
+            return Schema.stripTagging(fieldSchema.schema);
+        } else {
+            return fieldSchema.schema;
+        }
+    }
+
+    function _value (fieldSchema: StructFieldSchema, value: asn1.Value): asn1.Value {
+        if (Schema.isExplicitTagging(fieldSchema.schema)) {
+            // explicit tagging 的值一定是個單元素 array，內含真正的 value
+            const subValues = asn1.Value.components(value).or_else([]);
+            assert.ok(subValues.length === 1, 'explicit tagging definition error');
+            return subValues[0];
+        } else {
+            return value;
+        }
+    }
 }
 
-function pairs (fieldSchemas: StructFieldSchema[], values: asn1.Value[]): [StructFieldSchema, asn1.Value][] {
-    if (fieldSchemas.length === 0 || values.length === 0) {
-        return [];
+type _S = { tagNumber: number | '*', optional: boolean };
+type _V = { tagNumber: number };
+function align <S extends _S, V extends _V> (
+    schemas: S[],
+    values: V[],
+): Result<string, [S, V][]> {
+    // optional 的 schema 一定要有明確的 tag number 才能把資料對齊
+    if (schemas.some(i => i.optional && i.tagNumber === '*')) {
+        return Result.fail("tag number of optional field can't be unknown");
+    } else if (values.length === 0 && schemas.length > 0) {
+        if (schemas.every(i => i.optional)) {
+            return Result.ok([]);
+        } else {
+            return Result.fail('align schema error. schema is not optional but no value available');
+        }
+    } else if (schemas.length === 0) {
+        return Result.ok([]);                                   // schema 沒有定義的 value 就刪掉
     } else {
-        const [fieldSchema, value] = [fieldSchemas[0], values[0]];
-        return fieldSchema.tagging
-        .map(tagging => {
-            if (tagging.tagNumber === asn1.Value.tagNumber(value)) {
-                // 這個 optional 欄位有值
-                let cur: [StructFieldSchema, asn1.Value];
-                if (tagging.implicit === true) {
-                    cur = [fieldSchema, value];
+        const [schema, value] = [schemas[0], values[0]];
+        const rest = align(schemas.slice(1), values.slice(1));
+        if (schema.tagNumber === '*') {
+            return rest.map(rest => [pair(schema, value)].concat(rest));
+        } else {
+            if (schema.optional === true) {
+                if (schema.tagNumber === value.tagNumber) {
+                    return rest.map(rest => [pair(schema, value)].concat(rest));
                 } else {
-                    // explicit tagging 的值一定是個 array，內含真正的 value
-                    const elements = asn1.Value.components(value);
-                    assert.ok(elements.is_present(), 'explicit tagging definition error');
-                    cur = [fieldSchema, elements.get()[0]];
+                    return align(schemas.slice(1), values);
                 }
-                return [cur].concat(pairs(fieldSchemas.slice(1), values.slice(1)));
             } else {
-                // 沒有值，忽略
-                return pairs(fieldSchemas.slice(1), values);
+                if (schema.tagNumber === value.tagNumber) {
+                    return rest.map(rest => [pair(schema, value)].concat(rest));
+                } else {
+                    return Result.fail(`align schema error. tag number ${schema.tagNumber} !== ${value.tagNumber}`);
+                }
             }
-        })
-        .or_exec(() => {
-            return ([[fieldSchema, value]] as [[StructFieldSchema, asn1.Value]])
-            .concat(pairs(fieldSchemas.slice(1), values.slice(1)));
-        });
+        }
     }
+}
+
+function pair <A, B> (a: A, b: B): [A, B] {
+    return [a, b];
 }
