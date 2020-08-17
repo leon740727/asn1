@@ -6,8 +6,9 @@ const types_1 = require("types");
 const schema_1 = require("./schema");
 var schema;
 (function (schema_2) {
-    function any() {
-        return new SchemaBuilder(blank, false);
+    function any(tagNumber) {
+        const n = tagNumber === undefined ? '*' : tagNumber;
+        return new SchemaBuilder(amend(blank, { tagNumber: n }), false);
     }
     schema_2.any = any;
     function value(tagNumber) {

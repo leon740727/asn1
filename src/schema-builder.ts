@@ -4,8 +4,9 @@ import { Value } from './value';
 import { Schema, compose as _compose, simplify } from './schema';
 
 export namespace schema {
-    export function any () {
-        return new SchemaBuilder(blank, false);
+    export function any (tagNumber?: number) {
+        const n = tagNumber === undefined ? '*' : tagNumber;
+        return new SchemaBuilder(amend(blank, { tagNumber: n }), false);
     }
 
     export function value (tagNumber: number) {
