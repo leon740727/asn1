@@ -111,12 +111,12 @@ export namespace dumper {
     }
 
     export function utcTime (time: Date) {
-        const y = time.getFullYear().toString().slice(-2);
-        const m = paddingLeft((time.getMonth() + 1).toString(), '0', 2);
-        const d = paddingLeft(time.getDate().toString(), '0', 2);
-        const h = paddingLeft(time.getHours().toString(), '0', 2);
-        const M = paddingLeft(time.getMinutes().toString(), '0', 2);
-        const s = paddingLeft(time.getSeconds().toString(), '0', 2);
+        const y = paddingLeft(time.getUTCFullYear().toString().slice(-2), '0', 2);
+        const m = paddingLeft((time.getUTCMonth() + 1).toString(), '0', 2);
+        const d = paddingLeft(time.getUTCDate().toString(), '0', 2);
+        const h = paddingLeft(time.getUTCHours().toString(), '0', 2);
+        const M = paddingLeft(time.getUTCMinutes().toString(), '0', 2);
+        const s = paddingLeft(time.getUTCSeconds().toString(), '0', 2);
         const text = [y,m,d,h,M,s,'Z'].join('');
         const content = Buffer.concat(r.range(0, text.length).map(i => int2buf(text.charCodeAt(i))));
         return Buffer.concat([
