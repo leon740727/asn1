@@ -169,6 +169,22 @@ const decoderOf: {[name: string]: Decoder} = {
             const d = v as any;
             return wrap(v, new Date(Date.UTC(d.year, d.month-1, d.day, d.hour, d.minute, d.second)).toISOString());
         },
+    },
+    generalizedTime: {
+        suitable: v => v.idBlock.tagClass === 1 && v.idBlock.tagNumber === 24,
+        decode: v => {
+            const datestr = Buffer.from(valueHex(v).slice(2), 'hex').toString('utf-8');    // YYYYMMDDHHMMSSZ
+            assert.ok(datestr.endsWith('Z'), 'ASN.1 GeneralizedTime is not YYYYMMDDHHMMSSZ');
+            const [y, m, d, h, minute, s] = [
+                datestr.slice(0, 4),
+                datestr.slice(4, 6),
+                datestr.slice(6, 8),
+                datestr.slice(8, 10),
+                datestr.slice(10, 12),
+                datestr.slice(12, 14),
+            ].map(i => parseInt(i));
+            return wrap(v, new Date(Date.UTC(y, m-1, d, h, minute, s)).toISOString());
+        },
     }
 }
 

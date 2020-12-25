@@ -33,6 +33,7 @@ export namespace schema {
     export const t61 = () => new SchemaBuilder(amend(blank, { tagNumber: 20 }), false);     // T61 string
     export const ia5 = () => new SchemaBuilder(amend(blank, { tagNumber: 22 }), false);     // IA5 string
     export const utctime = () => new SchemaBuilder(amend(blank, { tagNumber: 23 }), false); // UTCTime
+    export const generalizedTime = () => new SchemaBuilder(amend(blank, { tagNumber: 24 }), false); // GeneralizedTime
 
     const blank: Schema = {
         tagNumber: '*',

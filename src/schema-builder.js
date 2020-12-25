@@ -35,6 +35,7 @@ var schema;
     schema_2.t61 = () => new SchemaBuilder(amend(blank, { tagNumber: 20 }), false); // T61 string
     schema_2.ia5 = () => new SchemaBuilder(amend(blank, { tagNumber: 22 }), false); // IA5 string
     schema_2.utctime = () => new SchemaBuilder(amend(blank, { tagNumber: 23 }), false); // UTCTime
+    schema_2.generalizedTime = () => new SchemaBuilder(amend(blank, { tagNumber: 24 }), false); // GeneralizedTime
     const blank = {
         tagNumber: '*',
         inner: types_1.Optional.empty(),

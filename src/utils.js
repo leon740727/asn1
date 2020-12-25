@@ -130,22 +130,38 @@ var dumper;
             LengthBlock.from(content.length),
             content,
         ]);
-        function paddingLeft(str, padding, minLength) {
-            if (str.length >= minLength) {
-                return str;
-            }
-            else {
-                const lack = minLength - str.length;
-                const p = r.range(0, lack)
-                    .map(_ => padding)
-                    .join('')
-                    .slice(0, lack); // 萬一 padding 不只一個字元
-                return p + str;
-            }
-        }
     }
     dumper.utcTime = utcTime;
+    function generalizedTime(time) {
+        const y = paddingLeft(time.getUTCFullYear().toString(), '0', 2);
+        const m = paddingLeft((time.getUTCMonth() + 1).toString(), '0', 2);
+        const d = paddingLeft(time.getUTCDate().toString(), '0', 2);
+        const h = paddingLeft(time.getUTCHours().toString(), '0', 2);
+        const M = paddingLeft(time.getUTCMinutes().toString(), '0', 2);
+        const s = paddingLeft(time.getUTCSeconds().toString(), '0', 2);
+        const text = [y, m, d, h, M, s, 'Z'].join('');
+        const content = Buffer.concat(r.range(0, text.length).map(i => int2buf(text.charCodeAt(i))));
+        return Buffer.concat([
+            Buffer.from('18', 'hex'),
+            LengthBlock.from(content.length),
+            content,
+        ]);
+    }
+    dumper.generalizedTime = generalizedTime;
 })(dumper = exports.dumper || (exports.dumper = {}));
+function paddingLeft(str, padding, minLength) {
+    if (str.length >= minLength) {
+        return str;
+    }
+    else {
+        const lack = minLength - str.length;
+        const p = r.range(0, lack)
+            .map(_ => padding)
+            .join('')
+            .slice(0, lack); // 萬一 padding 不只一個字元
+        return p + str;
+    }
+}
 function int2buf(n) {
     const hex = parseInt(n).toString(16);
     return Buffer.from(hex.length % 2 === 0 ? hex : `0${hex}`, 'hex');
