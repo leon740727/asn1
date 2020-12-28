@@ -67,11 +67,19 @@ export namespace LengthBlock {
 }
 
 export namespace dumper {
-    export function integer (n: number) {
+    /**
+     * @param n number || hex string like 0xff
+     * @param byteSize (optional) expected size
+     */
+    export function integer (n: number | string, byteSize?: number) {
+        const b = int2buf(n);
+        const paddingSize = (byteSize || 0) > b.length ? byteSize - b.length : 0;
+        const padding = Buffer.from(r.repeat('00', paddingSize).join(''), 'hex');
+        const res = Buffer.concat([padding, b]);
         return Buffer.concat([
             Buffer.from('02', 'hex'),
-            LengthBlock.from(int2buf(n).length),
-            int2buf(n),
+            LengthBlock.from(res.length),
+            res,
         ]);
     }
     
@@ -156,8 +164,14 @@ function paddingLeft (str: string, padding: string, minLength: number) {
     }
 }
 
-function int2buf (n: number) {
-    const hex = parseInt(n as any).toString(16);
+/**
+ * @param n number || hex string like 0xff
+ */
+function int2buf (n: number | string) {
+    if (typeof n === 'string') {
+        assert.ok(n.startsWith('0x'), 'integer in string type should starts with 0x');
+    }
+    const hex = typeof n === 'number' ? n.toString(16) : n.replace(/^0x/, '');
     return Buffer.from(hex.length % 2 === 0 ? hex : `0${hex}`, 'hex');
 }
 

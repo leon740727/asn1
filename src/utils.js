@@ -73,11 +73,19 @@ var LengthBlock;
 })(LengthBlock = exports.LengthBlock || (exports.LengthBlock = {}));
 var dumper;
 (function (dumper) {
-    function integer(n) {
+    /**
+     * @param n number || hex string like 0xff
+     * @param byteSize (optional) expected size
+     */
+    function integer(n, byteSize) {
+        const b = int2buf(n);
+        const paddingSize = (byteSize || 0) > b.length ? byteSize - b.length : 0;
+        const padding = Buffer.from(r.repeat('00', paddingSize).join(''), 'hex');
+        const res = Buffer.concat([padding, b]);
         return Buffer.concat([
             Buffer.from('02', 'hex'),
-            LengthBlock.from(int2buf(n).length),
-            int2buf(n),
+            LengthBlock.from(res.length),
+            res,
         ]);
     }
     dumper.integer = integer;
@@ -162,8 +170,14 @@ function paddingLeft(str, padding, minLength) {
         return p + str;
     }
 }
+/**
+ * @param n number || hex string like 0xff
+ */
 function int2buf(n) {
-    const hex = parseInt(n).toString(16);
+    if (typeof n === 'string') {
+        assert.ok(n.startsWith('0x'), 'integer in string type should starts with 0x');
+    }
+    const hex = typeof n === 'number' ? n.toString(16) : n.replace(/^0x/, '');
     return Buffer.from(hex.length % 2 === 0 ? hex : `0${hex}`, 'hex');
 }
 function buf2int(buf) {

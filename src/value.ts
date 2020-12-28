@@ -136,7 +136,11 @@ const decoderOf: {[name: string]: Decoder} = {
     },
     integer: {
         suitable: v => v.idBlock.tagClass === 1 && v.idBlock.tagNumber === 2,
-        decode: v => wrap(v, v.valueBlock.valueDec),
+        decode: v => {
+            const hex = valueHex(v);
+            const bn = BigInt(hex);
+            return wrap(v, bn > Number.MAX_SAFE_INTEGER ? `0x${bn.toString(16)}` : parseInt(hex, 16));
+        },
     },
     nonPrintableString: {
         suitable: v => v.idBlock.tagClass === 1 && [3, 4, 20, 22].some(n => n === v.idBlock.tagNumber),

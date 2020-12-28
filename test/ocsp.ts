@@ -18,7 +18,7 @@ namespace BasicOCSPResponse {
                     hashAlgorithm: schema.any(),
                     issuerNameHash: schema.oct(),
                     issuerKeyHash: schema.oct(),
-                    serialNumber: schema.any(),
+                    serialNumber: schema.int(),
                 }),
                 certStatus: schema.any(),
                 thisUpdate: schema.generalizedTime(),
@@ -43,6 +43,8 @@ describe('ocsp basic response', () => {
             const certIdHashAlgorithm = res['tbsResponseData']['responses'][0]['certID']['hashAlgorithm'];
             assert.ok(producedAt === '2020-12-23T03:27:57.000Z');
             assert.ok(JSON.stringify(certIdHashAlgorithm) === JSON.stringify(['1.3.14.3.2.26', null ]));
+            const certId = BigInt(res['tbsResponseData']['responses'][0]['certID']['serialNumber']);
+            assert.ok(certId.toString() === '18591377153366135306752357345801820721');
         });
     });
 });
