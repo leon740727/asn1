@@ -40,11 +40,22 @@ describe('ocsp basic response', () => {
         .chain(value => compose(BasicOCSPResponse.asn1Schema, value))
         .map(res => {
             const producedAt = res['tbsResponseData']['producedAt'];
-            const certIdHashAlgorithm = res['tbsResponseData']['responses'][0]['certID']['hashAlgorithm'];
             assert.ok(producedAt === '2020-12-23T03:27:57.000Z');
+
+            const cert = res['tbsResponseData']['responses'][0];
+            const certIdHashAlgorithm = cert['certID']['hashAlgorithm'];
+            const certId = BigInt(cert['certID']['serialNumber']);
+            const issuerNameHash = cert['certID']['issuerNameHash'];
+            const issuerKeyHash = cert['certID']['issuerKeyHash'];
+            const thisUpdate = cert['thisUpdate'];
+            const nextUpdate = cert['nextUpdate'];
+
             assert.ok(JSON.stringify(certIdHashAlgorithm) === JSON.stringify(['1.3.14.3.2.26', null ]));
-            const certId = BigInt(res['tbsResponseData']['responses'][0]['certID']['serialNumber']);
             assert.ok(certId.toString() === '18591377153366135306752357345801820721');
+            assert.ok(issuerNameHash === '0x105fa67a80089db5279f35ce830b43889ea3c70d');
+            assert.ok(issuerKeyHash === '0x0f80611c823161d52f28e78d4638b42ce1c6d9e2')
+            assert.ok(thisUpdate === '2020-12-23T03:27:57.000Z');
+            assert.ok(nextUpdate === '2020-12-30T02:42:57.000Z');
         });
     });
 });
