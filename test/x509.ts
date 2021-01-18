@@ -132,38 +132,31 @@ describe('x509', () => {
     -----END CERTIFICATE-----`;
 
     it('basic field', () => {
-        decode(Certificate.asn1Schema.main, pem2der(pemEvernote))
-        .map(v => {
-            const cert = v['tbsCertificate'];
-            assert.ok(BigInt(cert.serialNumber).toString() === '18591377153366135306752357345801820721');
-            assert.ok(cert.subject.filter(i => i[0].type === '2.5.4.10')[0][0].value === 'Evernote Corporation');
-            assert.ok(oct2buf(cert.subject.filter(i => i[0].type === '2.5.4.3')[0][0].value).toString('utf-8') === '*.evernote.com');
-            assert.ok(cert.validity[0] === '2020-09-02T00:00:00.000Z');     // notBefore
-            assert.ok(cert.validity[1] === '2021-10-04T00:00:00.000Z');     // notAfter
-        });
+        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote));
+        const cert = v['tbsCertificate'];
+        assert.ok(BigInt(cert.serialNumber).toString() === '18591377153366135306752357345801820721');
+        assert.ok(cert.subject.filter(i => i[0].type === '2.5.4.10')[0][0].value === 'Evernote Corporation');
+        assert.ok(oct2buf(cert.subject.filter(i => i[0].type === '2.5.4.3')[0][0].value).toString('utf-8') === '*.evernote.com');
+        assert.ok(cert.validity[0] === '2020-09-02T00:00:00.000Z');     // notBefore
+        assert.ok(cert.validity[1] === '2021-10-04T00:00:00.000Z');     // notAfter
     });
 
     it('subjectPublicKey match subjectKeyIdentifier', () => {
-        decode(Certificate.asn1Schema.main, pem2der(pemEvernote))
-        .map(v => {
-            const cert = v['tbsCertificate'];
-            const pkey = cert.subjectPublicKeyInfo.subjectPublicKey;
-            const pkeyId = cert.extensions.filter(i => i.extnID === '2.5.29.14')[0].extnValue;
-            assert.ok(verifyKeyId(oct2buf(pkey), oct2buf(pkeyId)));
-        });
+        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote));
+        const cert = v['tbsCertificate'];
+        const pkey = cert.subjectPublicKeyInfo.subjectPublicKey;
+        const pkeyId = cert.extensions.filter(i => i.extnID === '2.5.29.14')[0].extnValue;
+        assert.ok(verifyKeyId(oct2buf(pkey), oct2buf(pkeyId)));
     });
 
     it('ca public key match AuthorityKeyIdentifier', () => {
-        Result.all([
-            decode(Certificate.asn1Schema.main, pem2der(pemEvernote)),
-            decode(Certificate.asn1Schema.main, pem2der(pemDigiCert)),
-        ])
-        .map(([subject, ca]) => [subject['tbsCertificate'], ca['tbsCertificate']])
-        .map(([subject, ca]) => {
-            assert.ok(verifyKeyId(
-                oct2buf(ca.subjectPublicKeyInfo.subjectPublicKey),
-                oct2buf(subject.extensions.filter(i => i.extnID === '2.5.29.35')[0].extnValue)));
-        });
+        const [subject, ca] = [
+            decode(Certificate.asn1Schema.main, pem2der(pemEvernote))['tbsCertificate'],
+            decode(Certificate.asn1Schema.main, pem2der(pemDigiCert))['tbsCertificate'],
+        ];
+        assert.ok(verifyKeyId(
+            oct2buf(ca.subjectPublicKeyInfo.subjectPublicKey),
+            oct2buf(subject.extensions.filter(i => i.extnID === '2.5.29.35')[0].extnValue)));
     });
 
     it('verify signature', () => {
@@ -174,14 +167,14 @@ describe('x509', () => {
             const caPkey = crypto.createPublicKey(pemDigiCert.split('\n').map(i => i.trim()).join('\n'));
             assert.ok(crypto.verify('sha256', oct2buf(tbsCert), caPkey, oct2buf(sig)));
         })
-        .if_error(err => { throw err; });
+        .orError();
     });
 });
 
 function decode (schema, ber: Buffer) {
     return Value.fromBER(ber)
     .chain(v => compose(schema, v))
-    .if_error(error => { throw error; });
+    .orError();
 }
 
 function verifyKeyId (key: Buffer, id: Buffer) {

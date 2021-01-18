@@ -29,13 +29,13 @@ namespace Schema {
     export function isExplicitTagging (schema: Schema) {
         return schema.tagging
         .map(tagging => ! tagging.implicit)
-        .or_else(false);
+        .orElse(false);
     }
 
     export function finalTagNumber (schema: Schema) {
         return schema.tagging
         .map(tagging => tagging.tagNumber as number | '*')
-        .or_else(schema.tagNumber);
+        .orElse(schema.tagNumber);
     }
 
     export function stripTagging (schema: Schema): Schema {
@@ -77,7 +77,7 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
     .inner.map(inner => {
         if (Array.isArray(inner)) {                         // struct
             return asn1.Value.components(value)
-            .or_fail(`schema error`)
+            .orFail(`schema error`)
             .chain(values => {
                 const fieldSchemas = inner;
                 return _align(fieldSchemas, values)
@@ -88,19 +88,19 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
                     });
                     return Result.all(fvs)
                     .map(fvs => r.mergeAll(fvs))
-                    .if_error(errors => Optional.cat(errors)[0]);
+                    .ifFail(errors => Optional.filter(errors)[0]);
                 });
             });
         } else {                                            // list
             return asn1.Value.components(value)
-            .or_fail(`schema error`)
+            .orFail(`schema error`)
             .chain(elements => {
                 return Result.all(elements.map(v => compose(inner, v)))
-                .if_error(errors => Optional.cat(errors)[0]) as Result<string, Data>;
+                .ifFail(errors => Optional.filter(errors)[0]);
             });
         }
     })
-    .or_exec(() => {
+    .orExec(() => {
         const tag = Schema.finalTagNumber(schema);
         if (tag === '*' || tag === asn1.Value.tagNumber(value)) {
             return Result.ok(value);
@@ -118,7 +118,7 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
             values.map(v => ({ tagNumber: asn1.Value.tagNumber(v), _: v })),
         )
         .map(pairs => pairs.map(([f, v]) => pair(f._, v._)))
-        .if_error(error => `align schema (${fieldSchemas.map(f => f.name).join(', ')}) error: ${error}`);
+        .ifFail(error => `align schema (${fieldSchemas.map(f => f.name).join(', ')}) error: ${error}`);
     }
 
     function _schema (fieldSchema: StructFieldSchema) {
@@ -132,7 +132,7 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
     function _value (fieldSchema: StructFieldSchema, value: asn1.Value): asn1.Value {
         if (Schema.isExplicitTagging(fieldSchema.schema)) {
             // explicit tagging 的值一定是個單元素 array，內含真正的 value
-            const subValues = asn1.Value.components(value).or_else([]);
+            const subValues = asn1.Value.components(value).orElse([]);
             assert.ok(subValues.length === 1, 'explicit tagging definition error');
             return subValues[0];
         } else {
