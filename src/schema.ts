@@ -87,7 +87,7 @@ export function compose (schema: Schema, value: asn1.Value): Result<string, Data
                         .map(data => ({[fieldSchema.name]: data}));
                     });
                     return Result.all(fvs)
-                    .map(fvs => r.mergeAll(fvs))
+                    .map(fvs => r.mergeAll(fvs) as Data)
                     .ifFail(errors => Optional.filter(errors)[0]);
                 });
             });
