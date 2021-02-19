@@ -137,7 +137,9 @@ describe('x509', () => {
     });
     it('ca public key match AuthorityKeyIdentifier', () => {
         const [subject, ca] = [
+            //@ts-ignore
             decode(Certificate.asn1Schema.main, pem2der(pemEvernote))['tbsCertificate'],
+            //@ts-ignore
             decode(Certificate.asn1Schema.main, pem2der(pemDigiCert))['tbsCertificate'],
         ];
         assert.ok(verifyKeyId(oct2buf(ca.subjectPublicKeyInfo.subjectPublicKey), oct2buf(subject.extensions.filter(i => i.extnID === '2.5.29.35')[0].extnValue)));
@@ -145,7 +147,9 @@ describe('x509', () => {
     it('verify signature', () => {
         index_1.Value.fromBER(pem2der(pemEvernote))
             .map(v => {
+            //@ts-ignore
             const tbsCert = v.__value[0].__ber;
+            //@ts-ignore
             const sig = v.__value[2].__value;
             const caPkey = crypto.createPublicKey(pemDigiCert.split('\n').map(i => i.trim()).join('\n'));
             assert.ok(crypto.verify('sha256', oct2buf(tbsCert), caPkey, oct2buf(sig)));
@@ -173,6 +177,7 @@ function verifyKeyId(key, id) {
                 return idBox.some(i => find(i, target));
             }
             else {
+                //@ts-ignore
                 return ramda_1.values(idBox).some(i => find(i, target));
             }
         }

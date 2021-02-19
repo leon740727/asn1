@@ -1,9 +1,8 @@
 import * as assert from 'assert';
 import * as crypto from 'crypto';
 import { values } from 'ramda';
-import { Result, Json } from 'types';
+import { Json } from 'types';
 import { schema, Value, compose } from '../index';
-import { dumper } from '../src/utils';
 
 declare const describe, it, before, after, afterEach;
 
@@ -132,7 +131,7 @@ describe('x509', () => {
     -----END CERTIFICATE-----`;
 
     it('basic field', () => {
-        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote));
+        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote)) as NonNullable<Json>;
         const cert = v['tbsCertificate'];
         assert.ok(BigInt(cert.serialNumber).toString() === '18591377153366135306752357345801820721');
         assert.ok(cert.subject.filter(i => i[0].type === '2.5.4.10')[0][0].value === 'Evernote Corporation');
@@ -142,7 +141,7 @@ describe('x509', () => {
     });
 
     it('subjectPublicKey match subjectKeyIdentifier', () => {
-        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote));
+        const v = decode(Certificate.asn1Schema.main, pem2der(pemEvernote)) as NonNullable<Json>;
         const cert = v['tbsCertificate'];
         const pkey = cert.subjectPublicKeyInfo.subjectPublicKey;
         const pkeyId = cert.extensions.filter(i => i.extnID === '2.5.29.14')[0].extnValue;
@@ -151,7 +150,9 @@ describe('x509', () => {
 
     it('ca public key match AuthorityKeyIdentifier', () => {
         const [subject, ca] = [
+            //@ts-ignore
             decode(Certificate.asn1Schema.main, pem2der(pemEvernote))['tbsCertificate'],
+            //@ts-ignore
             decode(Certificate.asn1Schema.main, pem2der(pemDigiCert))['tbsCertificate'],
         ];
         assert.ok(verifyKeyId(
@@ -162,7 +163,9 @@ describe('x509', () => {
     it('verify signature', () => {
         Value.fromBER(pem2der(pemEvernote))
         .map(v => {
+            //@ts-ignore
             const tbsCert = v.__value[0].__ber;
+            //@ts-ignore
             const sig = v.__value[2].__value;
             const caPkey = crypto.createPublicKey(pemDigiCert.split('\n').map(i => i.trim()).join('\n'));
             assert.ok(crypto.verify('sha256', oct2buf(tbsCert), caPkey, oct2buf(sig)));
@@ -191,6 +194,7 @@ function verifyKeyId (key: Buffer, id: Buffer) {
             if (idBox instanceof Array) {
                 return idBox.some(i => find(i, target));
             } else {
+                //@ts-ignore
                 return values(idBox).some(i => find(i, target));
             }
         } else {

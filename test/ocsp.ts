@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { Json } from 'types';
 import { schema, Value, compose } from '../index';
 
 declare const describe, it, before, after, afterEach;
@@ -38,7 +39,7 @@ describe('ocsp basic response', () => {
     it('decode', () => {
         Value.fromBER(basicResp)
         .chain(value => compose(BasicOCSPResponse.asn1Schema, value))
-        .map(res => {
+        .map((res: NonNullable<Json>) => {
             const producedAt = res['tbsResponseData']['producedAt'];
             assert.ok(producedAt === '2020-12-23T03:27:57.000Z');
 

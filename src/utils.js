@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.dumper = exports.LengthBlock = exports.TypeBlock = void 0;
 const assert = require("assert");
 const r = require("ramda");
+const types_1 = require("types");
 var TypeBlock;
 (function (TypeBlock) {
     let Classes;
@@ -79,7 +80,9 @@ var dumper;
      */
     function integer(n, byteSize) {
         const b = int2buf(n);
-        const paddingSize = (byteSize || 0) > b.length ? byteSize - b.length : 0;
+        const paddingSize = types_1.Optional.of(byteSize)
+            .map(byteSize => byteSize > b.length ? byteSize - b.length : 0)
+            .orElse(0);
         const padding = Buffer.from(r.repeat('00', paddingSize).join(''), 'hex');
         const res = Buffer.concat([padding, b]);
         return Buffer.concat([

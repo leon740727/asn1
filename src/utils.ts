@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import * as r from 'ramda';
+import { Optional } from 'types';
 
 export namespace TypeBlock {
     export enum Classes {
@@ -73,7 +74,9 @@ export namespace dumper {
      */
     export function integer (n: number | string, byteSize?: number) {
         const b = int2buf(n);
-        const paddingSize = (byteSize || 0) > b.length ? byteSize - b.length : 0;
+        const paddingSize = Optional.of(byteSize)
+        .map(byteSize => byteSize > b.length ? byteSize - b.length : 0)
+        .orElse(0);
         const padding = Buffer.from(r.repeat('00', paddingSize).join(''), 'hex');
         const res = Buffer.concat([padding, b]);
         return Buffer.concat([

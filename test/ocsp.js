@@ -36,7 +36,7 @@ describe('ocsp basic response', () => {
     it('decode', () => {
         index_1.Value.fromBER(basicResp)
             .chain(value => index_1.compose(BasicOCSPResponse.asn1Schema, value))
-            .map(res => {
+            .map((res) => {
             const producedAt = res['tbsResponseData']['producedAt'];
             assert.ok(producedAt === '2020-12-23T03:27:57.000Z');
             const cert = res['tbsResponseData']['responses'][0];
