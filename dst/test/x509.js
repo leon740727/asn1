@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const assert = require("assert");
 const crypto = require("crypto");
 const ramda_1 = require("ramda");
-const index_1 = require("../index");
+const index_1 = require("../src/index");
 /** https://tools.ietf.org/html/rfc5280#section-4.1 */
 var Certificate;
 (function (Certificate) {

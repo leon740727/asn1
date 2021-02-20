@@ -1,12 +1,14 @@
 {
     "compilerOptions": {
         "target": "ES6",
+        "outDir": "./dst/",
+        "declaration": true,
         // "jsx": "react",
         "strictNullChecks": true,
         "module": "commonjs"
     },
     "files": [
-        "index.ts",
+        "src/index.ts",
     ],
     "include": [
         "./test",

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = require("assert");
-const index_1 = require("../index");
+const index_1 = require("../src/index");
 const utils_1 = require("../src/utils");
 describe('basic type', () => {
     it('GeneralizedTime', () => {

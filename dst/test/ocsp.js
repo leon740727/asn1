@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = require("assert");
-const index_1 = require("../index");
+const index_1 = require("../src/index");
 /**
  * basic OCSP response
  * https://www.ietf.org/rfc/rfc2560.txt

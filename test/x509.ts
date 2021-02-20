@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as crypto from 'crypto';
 import { values } from 'ramda';
 import { Json } from 'types';
-import { schema, Value, compose } from '../index';
+import { schema, Value, compose } from '../src/index';
 
 declare const describe, it, before, after, afterEach;
 

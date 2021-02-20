@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var value_1 = require("./src/value");
+var value_1 = require("./value");
 Object.defineProperty(exports, "Value", { enumerable: true, get: function () { return value_1.Value; } });
-var schema_builder_1 = require("./src/schema-builder");
+var schema_builder_1 = require("./schema-builder");
 Object.defineProperty(exports, "schema", { enumerable: true, get: function () { return schema_builder_1.schema; } });
 Object.defineProperty(exports, "compose", { enumerable: true, get: function () { return schema_builder_1.compose; } });
-var utils_1 = require("./src/utils");
+var utils_1 = require("./utils");
 Object.defineProperty(exports, "TypeBlock", { enumerable: true, get: function () { return utils_1.TypeBlock; } });
 Object.defineProperty(exports, "LengthBlock", { enumerable: true, get: function () { return utils_1.LengthBlock; } });
 Object.defineProperty(exports, "dumper", { enumerable: true, get: function () { return utils_1.dumper; } });

@@ -2,9 +2,9 @@
   "name": "asn1",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "dst/src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx mocha dst/test"
   },
   "author": "",
   "license": "ISC",

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { Json } from 'types';
-import { schema, Value, compose, dumper } from '../index';
+import { schema, Value, compose, dumper } from '../src/index';
 import { LengthBlock } from '../src/utils';
 
 declare const describe, it, before, after, afterEach;
